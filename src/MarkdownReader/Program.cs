@@ -22,7 +22,10 @@ public static class Program
         var mutexName = $@"Local\MarkdownReader.SingleInstance.{sid}";
         var pipeName  = $"MarkdownReader.OpenFile.{sid}";
 
-        var path = args.FirstOrDefault(a => File.Exists(a));
+        // First positional arg is the file path. Don't filter on File.Exists —
+        // pass the path through so TabItemView.LoadFile can surface a banner
+        // ("找不到文件: ..." with "从最近列表移除" action) for stale recent files.
+        var path = args.FirstOrDefault(a => !a.StartsWith("-", StringComparison.Ordinal));
 
         var mutex = new Mutex(initiallyOwned: true, mutexName, out var createdNew);
         if (!createdNew)
