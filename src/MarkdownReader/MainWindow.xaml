@@ -16,6 +16,9 @@
       <MenuItem Header="工具(_T)">
         <MenuItem Header="清理图片缓存" Click="OnClearCache" />
         <MenuItem Header="打开缓存目录" Click="OnOpenCacheDir" />
+        <Separator />
+        <MenuItem Header="设为 .md 默认打开" Click="OnRegisterAssoc" />
+        <MenuItem Header="取消文件关联"     Click="OnUnregisterAssoc" />
       </MenuItem>
     </Menu>
     <TabControl x:Name="Tabs" Grid.Row="1" />

@@ -87,4 +87,23 @@ public partial class MainWindow : Window
             MessageBox.Show($"打开失败：{ex.Message}", "错误");
         }
     }
+
+    private void OnRegisterAssoc(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            FileAssociation.Register();
+            MessageBox.Show("已注册。重启资源管理器或重新打开窗口后，双击 .md 即可。", "完成");
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"注册失败：{ex.Message}", "错误");
+        }
+    }
+
+    private void OnUnregisterAssoc(object sender, RoutedEventArgs e)
+    {
+        FileAssociation.Unregister();
+        MessageBox.Show("已取消文件关联。", "完成");
+    }
 }
