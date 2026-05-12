@@ -1,5 +1,5 @@
 import 'highlight.js/styles/github.css';
-import { renderMarkdown } from './parser';
+import { renderMarkdown, sanitize } from './parser';
 import { enhanceLinks } from './linkRules';
 import { snapshotScroll, restoreScroll, type ScrollSnapshot } from './scrollAnchor';
 
@@ -9,6 +9,13 @@ declare global {
   interface Window {
     chrome?: { webview?: { postMessage: (m: unknown) => void } };
   }
+}
+
+const WORKER_THRESHOLD = 200 * 1024;
+let worker: Worker | null = null;
+function getWorker(): Worker {
+  if (!worker) worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
+  return worker;
 }
 
 const content = document.getElementById('content') as HTMLElement;
@@ -48,19 +55,44 @@ window.addEventListener('message', (ev) => {
   if (!msg || typeof msg !== 'object') return;
 
   if (msg.type === 'render') {
-    try {
-      clearBanners();
-      applyTheme(msg.theme as Theme);
-      const t0 = performance.now();
-      const html = renderMarkdown(msg.md as string, msg.baseDir as string);
+    clearBanners();
+    applyTheme(msg.theme as Theme);
+    const md = msg.md as string;
+    const baseDir = msg.baseDir as string;
+    const t0 = performance.now();
+
+    const apply = (html: string) => {
       content.innerHTML = html;
       enhanceLinks(content);
-      restoreScroll(document.scrollingElement as HTMLElement, lastSnapshot);
-      postNative({ type: 'rendered', ms: performance.now() - t0, bytes: (msg.md as string).length });
-    } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
+      // double-rAF: let content-visibility blocks compute sizes before scroll restore
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        restoreScroll(document.scrollingElement as HTMLElement, lastSnapshot);
+      }));
+      postNative({ type: 'rendered', ms: performance.now() - t0, bytes: md.length });
+    };
+
+    const onError = (message: string) => {
       showBanner('error', `渲染失败：${message}`);
       postNative({ type: 'error', message });
+    };
+
+    if (md.length < WORKER_THRESHOLD) {
+      try { apply(renderMarkdown(md, baseDir)); }
+      catch (e) { onError(e instanceof Error ? e.message : String(e)); }
+    } else {
+      const w = getWorker();
+      const onMsg = (ev: MessageEvent) => {
+        w.removeEventListener('message', onMsg);
+        const r = ev.data as { ok: boolean; rawHtml?: string; error?: string };
+        if (r.ok && r.rawHtml !== undefined) {
+          // sanitize on main thread (DOMPurify needs DOM)
+          apply(sanitize(r.rawHtml));
+        } else {
+          onError(r.error ?? 'unknown worker error');
+        }
+      };
+      w.addEventListener('message', onMsg);
+      w.postMessage({ md, baseDir });
     }
   } else if (msg.type === 'setTheme') {
     applyTheme(msg.theme as Theme);

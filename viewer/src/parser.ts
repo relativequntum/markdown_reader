@@ -45,3 +45,15 @@ export function renderMarkdown(source: string, baseDir: string): string {
   const raw = md.render(source);
   return DOMPurify.sanitize(raw, purifyConfig) as string;
 }
+
+// Parse-only render (no sanitize). For use in Web Workers where DOM is unavailable.
+// Caller MUST run `sanitize()` on the main thread before injecting into the DOM.
+export function renderMarkdownUnsafe(source: string, baseDir: string): string {
+  currentBaseDir = baseDir;
+  return md.render(source);
+}
+
+// Sanitize raw HTML using the same DOMPurify config as renderMarkdown.
+export function sanitize(html: string): string {
+  return DOMPurify.sanitize(html, purifyConfig) as string;
+}
