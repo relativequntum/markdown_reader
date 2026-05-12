@@ -15,4 +15,19 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2592.51" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Resources\viewer\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <PropertyGroup>
+    <RepoRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\'))</RepoRoot>
+  </PropertyGroup>
+
+  <Target Name="BuildViewer" BeforeTargets="BeforeBuild" Condition="'$(Configuration)'=='Release'">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(RepoRoot)scripts\build-viewer.ps1&quot;"
+          WorkingDirectory="$(RepoRoot)" />
+  </Target>
 </Project>
