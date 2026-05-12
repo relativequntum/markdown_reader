@@ -63,6 +63,7 @@ public partial class TabItemView : UserControl
             _imgHandler.Register(Web.CoreWebView2);
 
             Web.CoreWebView2.WebMessageReceived += OnWebMessage;
+            Web.CoreWebView2.ProcessFailed += OnProcessFailed;
             Web.Source = new Uri("https://app.viewer/index.html");
         }
         catch (Exception ex)
@@ -166,6 +167,35 @@ public partial class TabItemView : UserControl
     {
         var app = (App)System.Windows.Application.Current;
         return app.ThemeWatcher?.IsLight == false ? "dark" : "light";
+    }
+
+    private async void OnProcessFailed(object? sender, CoreWebView2ProcessFailedEventArgs e)
+    {
+        var kind = e.ProcessFailedKind;
+        if (kind is not (CoreWebView2ProcessFailedKind.RenderProcessExited
+                      or CoreWebView2ProcessFailedKind.RenderProcessUnresponsive))
+            return;
+
+        Banner.Show("warn", "渲染进程异常，正在恢复…");
+
+        try
+        {
+            // Reload current page; WebView2 reuses the same control, the render process spawns fresh
+            if (Web.CoreWebView2 != null)
+            {
+                Web.CoreWebView2.Reload();
+                _webReady = new TaskCompletionSource();
+                await _webReady.Task;
+
+                // Re-post the render message so the doc shows up
+                if (State.RawText != null) await PostRenderAsync();
+            }
+            Banner.Hide();
+        }
+        catch (Exception ex)
+        {
+            Banner.Show("error", $"恢复失败: {ex.Message}");
+        }
     }
 
     private void OnWebMessage(object? sender, CoreWebView2WebMessageReceivedEventArgs e)

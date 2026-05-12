@@ -12,6 +12,12 @@ public static class Program
     [STAThread]
     public static int Main(string[] args)
     {
+        if (!IsWebView2Available())
+        {
+            ShowMissingWebView2Dialog();
+            return 2;
+        }
+
         var sid = WindowsIdentity.GetCurrent().User?.Value ?? "default";
         var mutexName = $@"Local\MarkdownReader.SingleInstance.{sid}";
         var pipeName  = $"MarkdownReader.OpenFile.{sid}";
@@ -52,6 +58,35 @@ public static class Program
         {
             try { mutex.ReleaseMutex(); } catch { /* ignore */ }
             mutex.Dispose();
+        }
+    }
+
+    private static bool IsWebView2Available()
+    {
+        try
+        {
+            var ver = Microsoft.Web.WebView2.Core.CoreWebView2Environment.GetAvailableBrowserVersionString();
+            return !string.IsNullOrEmpty(ver);
+        }
+        catch { return false; }
+    }
+
+    private static void ShowMissingWebView2Dialog()
+    {
+        var r = System.Windows.MessageBox.Show(
+            "本程序需要 Microsoft Edge WebView2 Runtime。\n\n是否打开下载页？",
+            "缺少 WebView2 Runtime",
+            System.Windows.MessageBoxButton.OKCancel,
+            System.Windows.MessageBoxImage.Warning);
+        if (r == System.Windows.MessageBoxResult.OK)
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
+                    "https://developer.microsoft.com/microsoft-edge/webview2/")
+                { UseShellExecute = true });
+            }
+            catch { /* best effort */ }
         }
     }
 }
