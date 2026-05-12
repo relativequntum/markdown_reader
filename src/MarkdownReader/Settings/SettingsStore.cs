@@ -13,25 +13,25 @@ public static class SettingsStore
         Converters = { new JsonStringEnumConverter() }
     };
 
-    public static Settings Load(string path)
+    public static AppSettings Load(string path)
     {
         try
         {
-            if (!File.Exists(path)) return new Settings();
+            if (!File.Exists(path)) return new AppSettings();
             var json = File.ReadAllText(path);
-            return JsonSerializer.Deserialize<Settings>(json, JsonOpts) ?? new Settings();
+            return JsonSerializer.Deserialize<AppSettings>(json, JsonOpts) ?? new AppSettings();
         }
         catch (JsonException)
         {
             var dir = Path.GetDirectoryName(path)!;
-            var ts = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+            var ts = DateTime.UtcNow.ToString("yyyyMMddHHmmssfff");
             var bad = Path.Combine(dir, $"settings.json.bad-{ts}");
             try { File.Move(path, bad, overwrite: true); } catch { /* best effort */ }
-            return new Settings();
+            return new AppSettings();
         }
     }
 
-    public static void Save(string path, Settings settings)
+    public static void Save(string path, AppSettings settings)
     {
         var dir = Path.GetDirectoryName(path)!;
         if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);

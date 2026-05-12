@@ -4,7 +4,7 @@ namespace MarkdownReader.Settings;
 
 public enum ThemeChoice { System, Light, Dark }
 
-public sealed class Settings
+public sealed class AppSettings
 {
     public ThemeChoice Theme { get; set; } = ThemeChoice.System;
     public long ImageCacheMaxBytes { get; set; } = 500L * 1024 * 1024;
