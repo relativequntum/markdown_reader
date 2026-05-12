@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Web.WebView2.Core;
+using MarkdownReader.Diagnostics;
 using MarkdownReader.Settings;
 
 namespace MarkdownReader.Tabs;
@@ -23,21 +24,30 @@ public static class WebView2Environment
 
     private static async Task<CoreWebView2Environment> InitAsync()
     {
-        var udf = Path.Combine(AppPaths.LocalRoot, "WebView2");
-        Directory.CreateDirectory(udf);
-
-        var opts = new CoreWebView2EnvironmentOptions();
-        // Custom scheme registration for mdimg:// (Task 3.6/3.7 uses this)
-        var scheme = new CoreWebView2CustomSchemeRegistration("mdimg")
+        try
         {
-            TreatAsSecure = true,
-            HasAuthorityComponent = true
-        };
-        scheme.AllowedOrigins.Add("*");
-        opts.CustomSchemeRegistrations.Add(scheme);
+            var udf = Path.Combine(AppPaths.LocalRoot, "WebView2");
+            Directory.CreateDirectory(udf);
 
-        var env = await CoreWebView2Environment.CreateAsync(null, udf, opts);
-        lock (_lock) { _env = env; _initTask = null; }
-        return env;
+            var opts = new CoreWebView2EnvironmentOptions();
+            // Custom scheme registration for mdimg:// (Task 3.6/3.7 uses this)
+            var scheme = new CoreWebView2CustomSchemeRegistration("mdimg")
+            {
+                TreatAsSecure = true,
+                HasAuthorityComponent = true
+            };
+            scheme.AllowedOrigins.Add("*");
+            opts.CustomSchemeRegistrations.Add(scheme);
+
+            var env = await CoreWebView2Environment.CreateAsync(null, udf, opts);
+            lock (_lock) { _env = env; _initTask = null; }
+            return env;
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Error("WebView2Environment.InitAsync", ex);
+            lock (_lock) { _initTask = null; }
+            throw;
+        }
     }
 }

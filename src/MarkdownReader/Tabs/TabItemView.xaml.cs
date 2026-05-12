@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using MarkdownReader.Diagnostics;
 using MarkdownReader.Files;
 using MarkdownReader.Images;
 using MarkdownReader.Settings;
@@ -39,7 +40,13 @@ public partial class TabItemView : UserControl
             var env = await WebView2Environment.GetAsync();
             await Web.EnsureCoreWebView2Async(env);
 
-            var viewerRoot = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "viewer");
+            var exeDir = Path.GetDirectoryName(Environment.ProcessPath)
+                         ?? AppDomain.CurrentDomain.BaseDirectory;
+            var viewerRoot = Path.Combine(exeDir, "Resources", "viewer");
+            if (!Directory.Exists(viewerRoot))
+                throw new DirectoryNotFoundException(
+                    $"viewer assets not found at: {viewerRoot}");
+
             Web.CoreWebView2.SetVirtualHostNameToFolderMapping(
                 "app.viewer", viewerRoot, CoreWebView2HostResourceAccessKind.Allow);
 
@@ -62,7 +69,7 @@ public partial class TabItemView : UserControl
             });
             _imgHandler = new MdImgHandler(resolver, () => env);
             var app = (App)Application.Current;
-            _imgHandler.RemoteFetcher = app.Fetcher.FetchAsync;
+            if (app.Fetcher != null) _imgHandler.RemoteFetcher = app.Fetcher.FetchAsync;
             _imgHandler.Register(Web.CoreWebView2);
 
             Web.CoreWebView2.WebMessageReceived += OnWebMessage;
@@ -71,7 +78,10 @@ public partial class TabItemView : UserControl
         }
         catch (Exception ex)
         {
-            ShowBanner("error", $"WebView2 init failed: {ex.Message}");
+            AppLogger.Error("WebView2 init", ex);
+            ShowBanner("error",
+                $"WebView2 初始化失败: {ex.GetType().Name} — {ex.Message}. " +
+                $"日志: %LocalAppData%\\MarkdownReader\\log.txt");
         }
     }
 
