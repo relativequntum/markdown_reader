@@ -16,13 +16,15 @@ public partial class App : Application
         base.OnStartup(e);
         Settings = SettingsStore.Load(AppPaths.SettingsFile);
 
+        // Start IPC server first so a second instance launching during
+        // MainWindow construction can connect immediately.
+        PipeServer = new PipeServer(PipeName, OnIpc);
+        PipeServer.Start();
+
         var mw = new MainWindow();
         MainWindow = mw;
         mw.Show();
         if (InitialPath is not null) mw.OpenFile(InitialPath);
-
-        PipeServer = new PipeServer(PipeName, OnIpc);
-        PipeServer.Start();
     }
 
     private void OnIpc(IpcMessage msg)
