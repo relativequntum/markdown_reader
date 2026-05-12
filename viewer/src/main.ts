@@ -7,7 +7,13 @@ type Theme = 'light' | 'dark';
 
 declare global {
   interface Window {
-    chrome?: { webview?: { postMessage: (m: unknown) => void } };
+    chrome?: {
+      webview?: {
+        postMessage: (m: unknown) => void;
+        addEventListener: (type: string, listener: (ev: MessageEvent) => void) => void;
+        removeEventListener: (type: string, listener: (ev: MessageEvent) => void) => void;
+      };
+    };
   }
 }
 
@@ -50,7 +56,7 @@ content.addEventListener('click', (ev) => {
 
 let lastSnapshot: ScrollSnapshot = { ratio: 0 };
 
-window.addEventListener('message', (ev) => {
+function handleNativeMessage(ev: MessageEvent) {
   const msg = ev.data;
   if (!msg || typeof msg !== 'object') return;
 
@@ -102,6 +108,14 @@ window.addEventListener('message', (ev) => {
     lastSnapshot = snapshotScroll(document.scrollingElement as HTMLElement);
     postNative({ type: 'scrollSnapshot', ratio: lastSnapshot.ratio });
   }
-});
+}
+
+// WebView2 delivers host→content messages via window.chrome.webview, NOT window.
+// Fall back to window.message for `vite dev` testing in a regular browser.
+if (window.chrome?.webview) {
+  window.chrome.webview.addEventListener('message', handleNativeMessage);
+} else {
+  window.addEventListener('message', handleNativeMessage);
+}
 
 postNative({ type: 'ready' });
