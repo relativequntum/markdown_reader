@@ -146,6 +146,19 @@ public partial class TabItemView : UserControl
         Web.CoreWebView2.PostWebMessageAsJson(payload);
     }
 
+    public void PushTheme(ThemeChoice t)
+    {
+        if (Web.CoreWebView2 == null) return;
+        var theme = t switch
+        {
+            ThemeChoice.Dark => "dark",
+            ThemeChoice.Light => "light",
+            _ => "light"   // SystemThemeWatcher (Task 3.9) will refine
+        };
+        var payload = System.Text.Json.JsonSerializer.Serialize(new { type = "setTheme", theme });
+        Web.CoreWebView2.PostWebMessageAsJson(payload);
+    }
+
     private void OnWebMessage(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
         try

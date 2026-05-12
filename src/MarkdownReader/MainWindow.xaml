@@ -4,8 +4,20 @@
         Title="Markdown Reader" Height="720" Width="1100">
   <Grid>
     <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
       <RowDefinition Height="*" />
     </Grid.RowDefinitions>
-    <TabControl x:Name="Tabs" />
+    <Menu Grid.Row="0">
+      <MenuItem Header="视图(_V)">
+        <MenuItem Header="主题/跟随系统" Click="OnThemeSystem" />
+        <MenuItem Header="主题/强制亮"   Click="OnThemeLight"  />
+        <MenuItem Header="主题/强制暗"   Click="OnThemeDark"   />
+      </MenuItem>
+      <MenuItem Header="工具(_T)">
+        <MenuItem Header="清理图片缓存" Click="OnClearCache" />
+        <MenuItem Header="打开缓存目录" Click="OnOpenCacheDir" />
+      </MenuItem>
+    </Menu>
+    <TabControl x:Name="Tabs" Grid.Row="1" />
   </Grid>
 </Window>

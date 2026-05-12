@@ -1,7 +1,9 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using MarkdownReader.Settings;
 using MarkdownReader.Shell;
 using MarkdownReader.Tabs;
 
@@ -45,4 +47,44 @@ public partial class MainWindow : Window
     }
 
     public void BringToForeground() => ForegroundHelper.BringToFront(this);
+
+    private void OnThemeSystem(object sender, RoutedEventArgs e) => SetTheme(ThemeChoice.System);
+    private void OnThemeLight (object sender, RoutedEventArgs e) => SetTheme(ThemeChoice.Light);
+    private void OnThemeDark  (object sender, RoutedEventArgs e) => SetTheme(ThemeChoice.Dark);
+
+    private void SetTheme(ThemeChoice t)
+    {
+        var app = (App)Application.Current;
+        app.Settings.Theme = t;
+        try { SettingsStore.Save(AppPaths.SettingsFile, app.Settings); } catch { /* best effort */ }
+        foreach (TabItem ti in Tabs.Items)
+            if (ti.Content is Tabs.TabItemView v) v.PushTheme(t);
+    }
+
+    private void OnClearCache(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (Directory.Exists(AppPaths.CacheDir)) Directory.Delete(AppPaths.CacheDir, true);
+            Directory.CreateDirectory(AppPaths.CacheDir);
+            MessageBox.Show("图片缓存已清理。", "完成");
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"清理失败：{ex.Message}", "错误");
+        }
+    }
+
+    private void OnOpenCacheDir(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Directory.CreateDirectory(AppPaths.CacheDir);
+            Process.Start(new ProcessStartInfo(AppPaths.CacheDir) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"打开失败：{ex.Message}", "错误");
+        }
+    }
 }
