@@ -81,6 +81,28 @@ public partial class MainWindow : Window
 
     public void BringToForeground() => ForegroundHelper.BringToFront(this);
 
+    private void OnDragOver(object sender, DragEventArgs e)
+    {
+        e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop)
+            ? DragDropEffects.Copy
+            : DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    private void OnDrop(object sender, DragEventArgs e)
+    {
+        if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
+        var files = (string[])e.Data.GetData(DataFormats.FileDrop);
+        foreach (var path in files)
+        {
+            if (System.IO.File.Exists(path) &&
+                string.Equals(System.IO.Path.GetExtension(path), ".md", StringComparison.OrdinalIgnoreCase))
+            {
+                OpenFile(path);
+            }
+        }
+    }
+
     private void OnThemeSystem(object sender, RoutedEventArgs e) => SetTheme(ThemeChoice.System);
     private void OnThemeLight (object sender, RoutedEventArgs e) => SetTheme(ThemeChoice.Light);
     private void OnThemeDark  (object sender, RoutedEventArgs e) => SetTheme(ThemeChoice.Dark);

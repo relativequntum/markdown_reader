@@ -1,7 +1,8 @@
 <Window x:Class="MarkdownReader.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Markdown Reader" Height="720" Width="1100">
+        Title="Markdown Reader" Height="720" Width="1100"
+        AllowDrop="True" DragOver="OnDragOver" Drop="OnDrop">
   <Grid>
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto" />
