@@ -44,6 +44,39 @@ public partial class MainWindow : Window
 
         Tabs.Items.Add(tab);
         Tabs.SelectedItem = tab;
+
+        var app = (App)Application.Current;
+        var list = app.Settings.RecentFiles;
+        list.RemoveAll(p => string.Equals(p, canonical, StringComparison.OrdinalIgnoreCase));
+        list.Insert(0, canonical);
+        if (list.Count > app.Settings.MaxRecent) list.RemoveRange(app.Settings.MaxRecent, list.Count - app.Settings.MaxRecent);
+        try { SettingsStore.Save(AppPaths.SettingsFile, app.Settings); } catch { }
+    }
+
+    private void OnRecentOpened(object sender, RoutedEventArgs e)
+    {
+        RecentMenu.Items.Clear();
+        var settings = ((App)Application.Current).Settings;
+        if (settings.RecentFiles.Count == 0)
+        {
+            RecentMenu.Items.Add(new MenuItem { Header = "(空)", IsEnabled = false });
+            return;
+        }
+        foreach (var p in settings.RecentFiles)
+        {
+            var mi = new MenuItem { Header = p };
+            var captured = p;
+            mi.Click += (_, _) => OpenFile(captured);
+            RecentMenu.Items.Add(mi);
+        }
+        RecentMenu.Items.Add(new Separator());
+        var clear = new MenuItem { Header = "清空最近" };
+        clear.Click += (_, _) =>
+        {
+            settings.RecentFiles.Clear();
+            try { SettingsStore.Save(AppPaths.SettingsFile, settings); } catch { }
+        };
+        RecentMenu.Items.Add(clear);
     }
 
     public void BringToForeground() => ForegroundHelper.BringToFront(this);

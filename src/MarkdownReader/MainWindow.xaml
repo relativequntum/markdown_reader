@@ -20,6 +20,7 @@
         <MenuItem Header="设为 .md 默认打开" Click="OnRegisterAssoc" />
         <MenuItem Header="取消文件关联"     Click="OnUnregisterAssoc" />
       </MenuItem>
+      <MenuItem x:Name="RecentMenu" Header="最近(_R)" SubmenuOpened="OnRecentOpened" />
     </Menu>
     <TabControl x:Name="Tabs" Grid.Row="1" />
   </Grid>
