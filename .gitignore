@@ -1,0 +1,74 @@
+# ── .NET / Visual Studio ─────────────────────────────────────────
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+*.user
+*.suo
+*.userprefs
+*.userosscache
+*.sln.docstates
+.vs/
+*.pdb
+*.exe
+*.dll
+!Resources/**/*.dll
+!Resources/**/*.exe
+
+# NuGet
+*.nupkg
+packages/
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+
+# Publish
+publish/
+**/Properties/launchSettings.json
+
+# AOT / Trim outputs
+PublishOutput/
+
+# ── Node / Frontend ──────────────────────────────────────────────
+node_modules/
+viewer/dist/
+.vite/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Vitest / coverage
+coverage/
+.nyc_output/
+
+# ── WebView2 ─────────────────────────────────────────────────────
+EBWebView/
+WebView2/UserData/
+
+# ── Editor / IDE ─────────────────────────────────────────────────
+.idea/
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/extensions.json
+*.swp
+
+# ── OS ───────────────────────────────────────────────────────────
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# ── Local test/cache artifacts ───────────────────────────────────
+*.log
+log.txt
+image-cache/
+local-cache/
+.env
+.env.local
+
+# ── Test fixtures（开发机本地，不入仓库；位置见 appsettings.IntegrationTests.json）
+test_sample/
