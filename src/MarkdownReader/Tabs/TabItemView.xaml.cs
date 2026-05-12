@@ -6,7 +6,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
 using MarkdownReader.Files;
 using MarkdownReader.Images;
 using MarkdownReader.Settings;
@@ -85,7 +84,11 @@ public partial class TabItemView : UserControl
             State.LoadedAt = DateTime.UtcNow;
             await PostRenderAsync();
         }
-        catch (FileNotFoundException) { ShowBanner("error", $"找不到文件: {path}"); }
+        catch (FileNotFoundException)
+        {
+            ShowBanner("error", $"找不到文件: {path}",
+                ("从最近列表移除", () => RemoveFromRecent(path)));
+        }
         catch (DirectoryNotFoundException) { ShowBanner("error", $"找不到目录: {path}"); }
         catch (UnauthorizedAccessException) { ShowBanner("error", "无权访问该文件"); }
         catch (IOException ex) { ShowBanner("error", ex.Message); }
@@ -222,13 +225,15 @@ public partial class TabItemView : UserControl
         }
     }
 
-    private void ShowBanner(string kind, string text)
+    private void ShowBanner(string kind, string text, params (string, Action)[] actions)
+        => Banner.Show(kind, text, actions);
+
+    private void HideBanner() => Banner.Hide();
+
+    private static void RemoveFromRecent(string path)
     {
-        BannerHost.Content = new TextBlock
-        {
-            Text = text,
-            Padding = new Thickness(10),
-            Background = kind == "error" ? Brushes.MistyRose : Brushes.PapayaWhip
-        };
+        var app = (App)System.Windows.Application.Current;
+        app.Settings.RecentFiles.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
+        try { Settings.SettingsStore.Save(Settings.AppPaths.SettingsFile, app.Settings); } catch { }
     }
 }
