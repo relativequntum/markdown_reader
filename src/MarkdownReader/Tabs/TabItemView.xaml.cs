@@ -1,7 +1,12 @@
 using System;
 using System.IO;
+using System.Text.Json;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
+using MarkdownReader.Files;
+using MarkdownReader.Settings;
 using Microsoft.Web.WebView2.Core;
 
 namespace MarkdownReader.Tabs;
@@ -13,6 +18,7 @@ public partial class TabItemView : UserControl
     public event Action? RequestClose;
 
     private TaskCompletionSource _webReady = new();
+    private FileWatcher? _watcher;
 
     public TabItemView()
     {
@@ -36,29 +42,89 @@ public partial class TabItemView : UserControl
         }
         catch (Exception ex)
         {
-            // Placeholder: future Task 4.1 ErrorBanner will surface this nicely.
-            BannerHost.Content = new TextBlock
-            {
-                Text = $"WebView2 init failed: {ex.Message}",
-                Padding = new System.Windows.Thickness(10),
-                Background = System.Windows.Media.Brushes.MistyRose
-            };
+            ShowBanner("error", $"WebView2 init failed: {ex.Message}");
         }
     }
 
-    public void LoadFile(string path)
+    public async void LoadFile(string path)
     {
         State.FilePath = path;
         State.BaseDir = Path.GetDirectoryName(path) ?? "";
         HeaderTextChanged?.Invoke(Path.GetFileName(path));
-        // Task 3.5 will: read file, wait for _webReady, post render message
+
+        try
+        {
+            var (text, _, _) = await FileLoader.LoadAsync(path);
+            State.RawText = text;
+            State.LoadedAt = DateTime.UtcNow;
+            await PostRenderAsync();
+        }
+        catch (FileNotFoundException) { ShowBanner("error", $"找不到文件: {path}"); }
+        catch (DirectoryNotFoundException) { ShowBanner("error", $"找不到目录: {path}"); }
+        catch (UnauthorizedAccessException) { ShowBanner("error", "无权访问该文件"); }
+        catch (IOException ex) { ShowBanner("error", ex.Message); }
+
+        // Watch for external changes
+        _watcher?.Dispose();
+        try
+        {
+            _watcher = new FileWatcher(path, TimeSpan.FromMilliseconds(200));
+            // Dispatcher.InvokeAsync(async () => …) is async-void under the hood — acceptable here
+            // because we want fire-and-forget UI marshaling; ReloadAsync swallows transient errors.
+            _watcher.Changed += () => Dispatcher.InvokeAsync(async () => await ReloadAsync());
+            _watcher.Renamed += np => Dispatcher.InvokeAsync(() =>
+            {
+                State.FilePath = np;
+                State.BaseDir = Path.GetDirectoryName(np) ?? "";
+                HeaderTextChanged?.Invoke(Path.GetFileName(np));
+            });
+            _watcher.Deleted += () => Dispatcher.InvokeAsync(() =>
+            {
+                State.IsDeleted = true;
+                ShowBanner("warn", "⚠ 文件已被删除（最后一次内容仍在显示）");
+            });
+        }
+        catch { /* FileSystemWatcher can fail on some drives (e.g. network), continue without */ }
+    }
+
+    private async Task ReloadAsync()
+    {
+        if (State.IsDeleted) return;
+        try
+        {
+            var (text, _, _) = await FileLoader.LoadAsync(State.FilePath);
+            State.RawText = text;
+            State.LoadedAt = DateTime.UtcNow;
+            await PostRenderAsync();
+        }
+        catch { /* silent — file may be in the middle of being written */ }
+    }
+
+    private async Task PostRenderAsync()
+    {
+        await _webReady.Task;
+        if (Web.CoreWebView2 == null) return;
+        var theme = ((App)Application.Current).Settings.Theme switch
+        {
+            ThemeChoice.Dark => "dark",
+            ThemeChoice.Light => "light",
+            _ => "light" // Task 3.9 will inspect SystemThemeWatcher
+        };
+        var payload = JsonSerializer.Serialize(new
+        {
+            type = "render",
+            md = State.RawText ?? "",
+            baseDir = State.BaseDir,
+            theme
+        });
+        Web.CoreWebView2.PostWebMessageAsJson(payload);
     }
 
     private void OnWebMessage(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
         try
         {
-            using var doc = System.Text.Json.JsonDocument.Parse(e.WebMessageAsJson);
+            using var doc = JsonDocument.Parse(e.WebMessageAsJson);
             if (!doc.RootElement.TryGetProperty("type", out var typeProp)) return;
             var type = typeProp.GetString();
             switch (type)
@@ -66,9 +132,58 @@ public partial class TabItemView : UserControl
                 case "ready":
                     _webReady.TrySetResult();
                     break;
-                // linkClick / rendered / error handlers come in Tasks 3.5/4.x
+                case "linkClick":
+                    HandleLinkClick(doc.RootElement);
+                    break;
+                case "error":
+                    if (doc.RootElement.TryGetProperty("message", out var m))
+                        ShowBanner("error", m.GetString() ?? "");
+                    break;
+                case "rendered":
+                    // Performance hook — Task 5.x will use this for benchmarks
+                    break;
             }
         }
-        catch (System.Text.Json.JsonException) { /* ignore malformed */ }
+        catch (JsonException) { /* ignore malformed messages */ }
+    }
+
+    private void HandleLinkClick(JsonElement el)
+    {
+        var href = el.TryGetProperty("href", out var h) ? h.GetString() ?? "" : "";
+        var kind = el.TryGetProperty("kind", out var k) ? k.GetString() ?? "" : "";
+        try
+        {
+            if (kind == "external")
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(href) { UseShellExecute = true });
+            }
+            else if (kind == "mdfile")
+            {
+                var resolved = Path.IsPathRooted(href) ? href : Path.GetFullPath(Path.Combine(State.BaseDir, href));
+                if (Application.Current.MainWindow is MarkdownReader.MainWindow mw)
+                    mw.OpenFile(resolved);
+            }
+            else if (kind == "localfile")
+            {
+                var r = MessageBox.Show($"用系统默认程序打开:\n{href}?", "确认", MessageBoxButton.OKCancel);
+                if (r == MessageBoxResult.OK)
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(href) { UseShellExecute = true });
+            }
+            // anchor handled by browser default; invalid neutralized at viewer side
+        }
+        catch (Exception ex)
+        {
+            ShowBanner("error", $"打开链接失败: {ex.Message}");
+        }
+    }
+
+    private void ShowBanner(string kind, string text)
+    {
+        BannerHost.Content = new TextBlock
+        {
+            Text = text,
+            Padding = new Thickness(10),
+            Background = kind == "error" ? Brushes.MistyRose : Brushes.PapayaWhip
+        };
     }
 }
