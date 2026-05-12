@@ -22,6 +22,22 @@ describe('classifyLink', () => {
   it('javascript: → invalid', () => {
     expect(classifyLink('javascript:alert(1)').kind).toBe('invalid');
   });
+
+  it('mailto/tel/sms → external', () => {
+    expect(classifyLink('mailto:foo@example.com').kind).toBe('external');
+    expect(classifyLink('tel:+1234567890').kind).toBe('external');
+    expect(classifyLink('sms:+1234567890').kind).toBe('external');
+  });
+
+  it('data: / blob: → invalid', () => {
+    expect(classifyLink('data:text/html,<script>alert(1)</script>').kind).toBe('invalid');
+    expect(classifyLink('blob:https://x/abc').kind).toBe('invalid');
+  });
+
+  it('case-insensitive on unsafe schemes', () => {
+    expect(classifyLink('JavaScript:alert(1)').kind).toBe('invalid');
+    expect(classifyLink('DATA:text/html,x').kind).toBe('invalid');
+  });
 });
 
 describe('enhanceLinks', () => {

@@ -2,8 +2,9 @@ export type LinkKind = 'external' | 'anchor' | 'mdfile' | 'localfile' | 'invalid
 
 export function classifyLink(href: string): { kind: LinkKind } {
   if (!href) return { kind: 'invalid' };
-  if (/^javascript:/i.test(href) || /^vbscript:/i.test(href)) return { kind: 'invalid' };
+  if (/^(?:javascript|vbscript|data|blob):/i.test(href)) return { kind: 'invalid' };
   if (/^https?:\/\//i.test(href)) return { kind: 'external' };
+  if (/^(?:mailto|tel|sms):/i.test(href)) return { kind: 'external' };
   if (href.startsWith('#')) return { kind: 'anchor' };
   if (/^file:\/\/.*\.md(\?|#|$)/i.test(href)) return { kind: 'mdfile' };
   if (/\.md(\?|#|$)/i.test(href)) return { kind: 'mdfile' };
