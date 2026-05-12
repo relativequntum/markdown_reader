@@ -30,4 +30,42 @@ public class PathValidatorTests
         Assert.False(PathValidator.IsAllowed("", Whitelist));
         Assert.False(PathValidator.IsAllowed(null!, Whitelist));
     }
+
+    [Fact]
+    public void NullWhitelist_NotAllowed()
+    {
+        Assert.False(PathValidator.IsAllowed(@"C:\Docs\a.png", null!));
+    }
+
+    [Fact]
+    public void WhitelistWithNullOrEmptyEntries_StillWorks()
+    {
+        var wl = new[] { null!, "", "   ", @"C:\Docs" };
+        Assert.True(PathValidator.IsAllowed(@"C:\Docs\a.png", wl));
+        Assert.False(PathValidator.IsAllowed(@"C:\Windows\evil.dll", wl));
+    }
+
+    [Fact]
+    public void WhitelistWithMalformedEntry_FailsClosedNotThrows()
+    {
+        var wl = new[] { "::invalid::", @"C:\Docs" };
+        Assert.True(PathValidator.IsAllowed(@"C:\Docs\a.png", wl));
+        Assert.False(PathValidator.IsAllowed(@"C:\Windows\evil.dll", wl));
+    }
+
+    [Fact]
+    public void Whitelist_TrailingSeparator_Works()
+    {
+        var wl = new[] { @"C:\Docs\" };
+        Assert.True(PathValidator.IsAllowed(@"C:\Docs\a.png", wl));
+    }
+
+    [Theory]
+    [InlineData(@"C:\DocsExtra\foo.png", false)]   // prefix-collision protection
+    [InlineData(@"C:/Docs/images/a.png", true)]    // forward-slash on Windows
+    [InlineData(@"\\?\C:\Docs\..\Windows\x.png", false)]   // DOS-device + traversal
+    public void IsAllowed_EdgeCases(string path, bool expected)
+    {
+        Assert.Equal(expected, PathValidator.IsAllowed(path, Whitelist));
+    }
 }
