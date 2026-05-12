@@ -12,6 +12,7 @@ public partial class App : Application
     public PipeServer? PipeServer { get; private set; }
     public Images.ImageCache Cache { get; private set; } = null!;
     public Images.RemoteImageFetcher Fetcher { get; private set; } = null!;
+    public Theme.SystemThemeWatcher ThemeWatcher { get; private set; } = null!;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -38,6 +39,21 @@ public partial class App : Application
         MainWindow = mw;
         mw.Show();
         if (InitialPath is not null) mw.OpenFile(InitialPath);
+
+        ThemeWatcher = new Theme.SystemThemeWatcher();
+        ThemeWatcher.IsLightChanged += _ =>
+        {
+            if (Settings.Theme != ThemeChoice.System) return;
+            Dispatcher.InvokeAsync(() =>
+            {
+                if (MainWindow is MainWindow win)
+                {
+                    foreach (System.Windows.Controls.TabItem ti in win.Tabs.Items)
+                        if (ti.Content is Tabs.TabItemView v)
+                            v.PushTheme(ThemeChoice.System);
+                }
+            });
+        };
     }
 
     private void OnIpc(IpcMessage msg)
@@ -54,6 +70,7 @@ public partial class App : Application
     {
         PipeServer?.Dispose();
         try { SettingsStore.Save(AppPaths.SettingsFile, Settings); } catch { }
+        ThemeWatcher?.Dispose();
         base.OnExit(e);
     }
 }

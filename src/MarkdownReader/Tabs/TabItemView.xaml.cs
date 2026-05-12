@@ -134,7 +134,7 @@ public partial class TabItemView : UserControl
         {
             ThemeChoice.Dark => "dark",
             ThemeChoice.Light => "light",
-            _ => "light" // Task 3.9 will inspect SystemThemeWatcher
+            _ => SystemTheme()
         };
         var payload = JsonSerializer.Serialize(new
         {
@@ -153,10 +153,16 @@ public partial class TabItemView : UserControl
         {
             ThemeChoice.Dark => "dark",
             ThemeChoice.Light => "light",
-            _ => "light"   // SystemThemeWatcher (Task 3.9) will refine
+            _ => SystemTheme()
         };
         var payload = System.Text.Json.JsonSerializer.Serialize(new { type = "setTheme", theme });
         Web.CoreWebView2.PostWebMessageAsJson(payload);
+    }
+
+    private static string SystemTheme()
+    {
+        var app = (App)System.Windows.Application.Current;
+        return app.ThemeWatcher?.IsLight == false ? "dark" : "light";
     }
 
     private void OnWebMessage(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
