@@ -34,6 +34,8 @@ PublishOutput/
 node_modules/
 viewer/dist/
 .vite/
+# Vite build output for the viewer (reproducible from viewer/ via `npm run build`)
+src/MarkdownReader/Resources/viewer/
 *.log
 npm-debug.log*
 yarn-debug.log*
