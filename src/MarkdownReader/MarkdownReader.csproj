@@ -7,8 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <!-- TODO: uncomment in Task 4.6 -->
-    <!-- <ApplicationManifest>app.manifest</ApplicationManifest> -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
     <RootNamespace>MarkdownReader</RootNamespace>
     <AssemblyName>MarkdownReader</AssemblyName>
     <StartupObject>MarkdownReader.Program</StartupObject>
