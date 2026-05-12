@@ -1,11 +1,14 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using MarkdownReader.Files;
+using MarkdownReader.Images;
 using MarkdownReader.Settings;
 using Microsoft.Web.WebView2.Core;
 
@@ -19,6 +22,7 @@ public partial class TabItemView : UserControl
 
     private TaskCompletionSource _webReady = new();
     private FileWatcher? _watcher;
+    private MdImgHandler? _imgHandler;
 
     public TabItemView()
     {
@@ -36,6 +40,26 @@ public partial class TabItemView : UserControl
             var viewerRoot = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "viewer");
             Web.CoreWebView2.SetVirtualHostNameToFolderMapping(
                 "app.viewer", viewerRoot, CoreWebView2HostResourceAccessKind.Allow);
+
+            // Register mdimg:// custom-scheme handler. Whitelist is evaluated per-request,
+            // so it sees the current State.BaseDir without re-registering when LoadFile runs.
+            var resolver = new LocalImageResolver(() =>
+            {
+                var settings = ((App)Application.Current).Settings;
+                var roots = new List<string>
+                {
+                    State.BaseDir,
+                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                    Path.GetTempPath()
+                };
+                roots.AddRange(settings.ImagePathWhitelist);
+                return roots
+                    .Where(p => !string.IsNullOrWhiteSpace(p))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+            });
+            _imgHandler = new MdImgHandler(resolver, () => env);
+            _imgHandler.Register(Web.CoreWebView2);
 
             Web.CoreWebView2.WebMessageReceived += OnWebMessage;
             Web.Source = new Uri("https://app.viewer/index.html");
