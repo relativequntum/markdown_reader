@@ -3,6 +3,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using MarkdownReader.Shell;
+using MarkdownReader.Tabs;
 
 namespace MarkdownReader;
 
@@ -19,7 +20,6 @@ public partial class MainWindow : Window
         try { canonical = Path.GetFullPath(path); }
         catch { return; }
 
-        // Switch to existing tab if same file already open
         foreach (TabItem t in Tabs.Items)
         {
             if (t.Tag is string existing && string.Equals(existing, canonical, StringComparison.OrdinalIgnoreCase))
@@ -29,19 +29,17 @@ public partial class MainWindow : Window
             }
         }
 
-        // Placeholder content. Task 3.4 will replace this with a TabItemView containing WebView2.
-        var content = new TextBlock
-        {
-            Text = $"[placeholder] {canonical}",
-            Margin = new Thickness(20)
-        };
-
+        var view = new TabItemView();
         var tab = new TabItem
         {
             Header = Path.GetFileName(canonical),
-            Content = content,
+            Content = view,
             Tag = canonical
         };
+        view.HeaderTextChanged += text => tab.Header = text;
+        view.RequestClose += () => Tabs.Items.Remove(tab);
+        view.LoadFile(canonical);
+
         Tabs.Items.Add(tab);
         Tabs.SelectedItem = tab;
     }
