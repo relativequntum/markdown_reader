@@ -1,1 +1,4 @@
-/* placeholder */
+:root.theme-light { --bg: #ffffff; --fg: #1f1f1f; --border: #e3e3e3; --code-bg: #f3f3f3; }
+html.theme-light, html.theme-light body { background: var(--bg); color: var(--fg); }
+html.theme-light #content code { background: var(--code-bg); }
+html.theme-light #content pre { background: var(--code-bg); }

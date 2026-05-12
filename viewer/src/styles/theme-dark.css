@@ -1,1 +1,4 @@
-/* placeholder */
+:root.theme-dark { --bg: #1e1e1e; --fg: #e6e6e6; --border: #383838; --code-bg: #2a2a2a; }
+html.theme-dark, html.theme-dark body { background: var(--bg); color: var(--fg); }
+html.theme-dark #content code { background: var(--code-bg); }
+html.theme-dark #content pre { background: var(--code-bg); }
