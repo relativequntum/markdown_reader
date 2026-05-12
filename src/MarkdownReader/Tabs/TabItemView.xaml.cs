@@ -74,6 +74,26 @@ public partial class TabItemView : UserControl
 
             Web.CoreWebView2.WebMessageReceived += OnWebMessage;
             Web.CoreWebView2.ProcessFailed += OnProcessFailed;
+
+            // Diagnostic: enable F12 dev tools and log navigation outcomes so we
+            // can see why a blank page might not render.
+            Web.CoreWebView2.Settings.AreDevToolsEnabled = true;
+            Web.CoreWebView2.NavigationCompleted += (_, args) =>
+            {
+                if (!args.IsSuccess)
+                    AppLogger.Error("Navigation failed",
+                        new Exception($"WebErrorStatus={args.WebErrorStatus}, HttpStatusCode={args.HttpStatusCode}"));
+            };
+            Web.CoreWebView2.WebResourceResponseReceived += (_, args) =>
+            {
+                var status = args.Response?.StatusCode ?? 0;
+                if (status >= 400)
+                {
+                    AppLogger.Error("Resource fetch failed",
+                        new Exception($"{status} {args.Response?.ReasonPhrase}: {args.Request.Uri}"));
+                }
+            };
+
             Web.Source = new Uri("https://app.viewer/index.html");
         }
         catch (Exception ex)
