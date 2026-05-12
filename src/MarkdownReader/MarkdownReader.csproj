@@ -10,6 +10,7 @@
     <!-- <ApplicationManifest>app.manifest</ApplicationManifest> -->
     <RootNamespace>MarkdownReader</RootNamespace>
     <AssemblyName>MarkdownReader</AssemblyName>
+    <StartupObject>MarkdownReader.Program</StartupObject>
     <!-- 发布相关在 Phase 6 再开启 -->
   </PropertyGroup>
   <ItemGroup>
