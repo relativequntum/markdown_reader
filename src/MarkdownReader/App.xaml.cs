@@ -10,11 +10,24 @@ public partial class App : Application
     public string? InitialPath { get; set; }
     public AppSettings Settings { get; private set; } = new();
     public PipeServer? PipeServer { get; private set; }
+    public Images.ImageCache Cache { get; private set; } = null!;
+    public Images.RemoteImageFetcher Fetcher { get; private set; } = null!;
 
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
         Settings = SettingsStore.Load(AppPaths.SettingsFile);
+
+        // Image cache + remote fetcher (process-wide singletons)
+        Cache = new Images.ImageCache(AppPaths.CacheDir, new Files.RealFileSystem(), TimeProvider.System);
+        Fetcher = new Images.RemoteImageFetcher(Cache);
+
+        // Async cache cleanup (don't block startup)
+        _ = System.Threading.Tasks.Task.Run(() =>
+        {
+            try { Cache.EnforceLimits(Settings.ImageCacheMaxBytes, Settings.ImageCacheMaxFiles); }
+            catch { /* best effort */ }
+        });
 
         // Start IPC server first so a second instance launching during
         // MainWindow construction can connect immediately.

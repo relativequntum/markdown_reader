@@ -59,6 +59,8 @@ public partial class TabItemView : UserControl
                     .ToArray();
             });
             _imgHandler = new MdImgHandler(resolver, () => env);
+            var app = (App)Application.Current;
+            _imgHandler.RemoteFetcher = app.Fetcher.FetchAsync;
             _imgHandler.Register(Web.CoreWebView2);
 
             Web.CoreWebView2.WebMessageReceived += OnWebMessage;
