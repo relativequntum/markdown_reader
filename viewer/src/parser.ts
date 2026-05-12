@@ -30,7 +30,11 @@ md.renderer.rules.image = (tokens, idx, opts, env, self) => {
 };
 
 const purifyConfig: Config = {
-  ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|tel|mdimg|file|#|\.\/|\/|data):|[^:]+$)/i,
+  // Whitelist of safe URI schemes. data: restricted to common image MIME types
+  // (DOMPurify's default safe-URI behavior is replaced when we provide our own
+  // regex, so we must replicate the data:image/* discrimination explicitly).
+  // file: removed — rewriteSrc routes file URLs to mdimg://abs/.
+  ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|tel|mdimg|#|\.\/|\/):|data:image\/(?:png|jpe?g|gif|webp|svg\+xml|avif|bmp|x-icon)(?:;|,)|[^:]+$)/i,
   FORBID_TAGS: ['style', 'script', 'iframe', 'object', 'embed', 'form', 'button'],
   FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus'],
   ALLOW_DATA_ATTR: false

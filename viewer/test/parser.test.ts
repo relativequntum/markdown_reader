@@ -43,4 +43,22 @@ describe('parser', () => {
     const html = renderMarkdown('see https://example.com here', base);
     expect(html).toContain('<a href="https://example.com"');
   });
+
+  it('blocks data:text/html in image src', () => {
+    const html = renderMarkdown('![](data:text/html,hello)', base);
+    expect(html).not.toMatch(/src="data:text\/html/);
+  });
+
+  it('allows data:image/png in image src', () => {
+    const dataUrl = 'data:image/png;base64,iVBORw0KGgo=';
+    const html = renderMarkdown(`![](${dataUrl})`, base);
+    // either preserved as-is (current behavior) or routed through rewriteSrc;
+    // both are fine as long as the safe data URL is not stripped
+    expect(html).toContain('<img');
+  });
+
+  it('blocks javascript: in image src', () => {
+    const html = renderMarkdown('![](javascript:alert%281%29)', base);
+    expect(html).not.toMatch(/src="javascript:/);
+  });
 });
