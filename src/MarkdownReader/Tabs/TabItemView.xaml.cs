@@ -19,6 +19,9 @@ public partial class TabItemView : UserControl
     public event Action<string>? HeaderTextChanged;
     public event Action? RequestClose;
 
+    private const long WarnThresholdBytes = 8L * 1024 * 1024;
+    private const long RejectThresholdBytes = 50L * 1024 * 1024;
+
     private TaskCompletionSource _webReady = new();
     private FileWatcher? _watcher;
     private MdImgHandler? _imgHandler;
@@ -78,6 +81,30 @@ public partial class TabItemView : UserControl
         State.BaseDir = Path.GetDirectoryName(path) ?? "";
         HeaderTextChanged?.Invoke(Path.GetFileName(path));
 
+        long size;
+        try { size = new FileInfo(path).Length; }
+        catch (Exception ex) { ShowBanner("error", $"无法读取文件: {ex.Message}"); return; }
+
+        if (size > RejectThresholdBytes)
+        {
+            ShowBanner("error", $"文件过大 ({size / 1024 / 1024} MB)，可能不是文本");
+            return;
+        }
+        if (size > WarnThresholdBytes)
+        {
+            var sizeMB = (size / 1024.0 / 1024.0).ToString("F1");
+            ShowBanner("warn",
+                $"此文件较大 ({sizeMB} MB)，渲染可能需要几秒",
+                ("继续渲染", () => { HideBanner(); _ = DoLoadAsync(path); }),
+                ("关闭标签页", () => RequestClose?.Invoke()));
+            return;
+        }
+
+        await DoLoadAsync(path);
+    }
+
+    private async Task DoLoadAsync(string path)
+    {
         try
         {
             var (text, _, _) = await FileLoader.LoadAsync(path);
